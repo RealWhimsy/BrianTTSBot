@@ -20,7 +20,7 @@ polly_client = boto3.Session(
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='&')
+bot = commands.Bot(command_prefix='$')
 
 
 def play(vc, is_incrementing=False):
@@ -167,7 +167,7 @@ class Info(commands.Cog):
 
 
 # advanced help message by Chris#0001 https://gist.github.com/nonchris/1c7060a14a9d94e7929aa2ef14c41bc2
-class Bttshelp(commands.Cog):
+class Help(commands.Cog):
     """
     Sends this help message
     """
@@ -177,11 +177,11 @@ class Bttshelp(commands.Cog):
 
     @commands.command()
     # @commands.bot_has_permissions(add_reactions=True,embed_links=True)
-    async def bttshelp(self, ctx, *input):
+    async def help(self, ctx, *input):
         """Shows all modules of that bot"""
 
         # !SET THOSE VARIABLES TO MAKE THE COG FUNCTIONAL!
-        prefix = '&'
+        prefix = '$'
         version = 1.0
 
         # setting owner name - if you don't wanna be mentioned remove line 49-60 and adjust help text (line 88)
@@ -277,6 +277,6 @@ bot.remove_command('help')
 bot.add_cog(PlayCommands())
 bot.add_cog(ChannelCommands())
 bot.add_cog(Info())
-bot.add_cog(Bttshelp(bot))
+bot.add_cog(Help(bot))
 
 bot.run(TOKEN)
