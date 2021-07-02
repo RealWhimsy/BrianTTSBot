@@ -20,7 +20,7 @@ polly_client = boto3.Session(
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='/')
+bot = commands.Bot(command_prefix='&')
 
 
 def play(vc, is_incrementing=False):
@@ -181,7 +181,7 @@ class Bttshelp(commands.Cog):
         """Shows all modules of that bot"""
 
         # !SET THOSE VARIABLES TO MAKE THE COG FUNCTIONAL!
-        prefix = '/'
+        prefix = '&'
         version = 1.0
 
         # setting owner name - if you don't wanna be mentioned remove line 49-60 and adjust help text (line 88)
