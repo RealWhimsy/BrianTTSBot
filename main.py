@@ -2,15 +2,19 @@ import os
 import discord
 import requests
 import boto3
+import asyncio
 from discord import Forbidden, client, channel
 from discord.ext import commands, tasks
 from discord.voice_client import VoiceClient
 from discord.utils import get
 from dotenv import load_dotenv
 
-counter = 0
-played_counter = 0
-already_playing = False
+AUTO_TIMEOUT_SECONDS = 300  # bot will automatically leave after not sending voice activity for this many seconds
+counter = 0                 # counts the length of the queue
+played_counter = 0          # number of already played tracks from the queue
+already_playing = False     # true if the bot is already playing
+last_play = None            # unique id of the last played track, used to check for idle times
+has_played_once = False     # true if the bot has played tts at least once after joining a voice channel
 
 load_dotenv()
 polly_client = boto3.Session(
@@ -58,6 +62,22 @@ def clear_queue():
     already_playing = False
 
 
+async def auto_leave(vc):
+    global has_played_once
+
+    await asyncio.sleep(AUTO_TIMEOUT_SECONDS)
+
+    if not has_played_once:
+        await disconnect(vc)
+
+
+async def disconnect(vc):
+    global has_played_once
+    if vc and vc.is_connected():
+        await vc.disconnect()
+        has_played_once = False
+
+
 async def send_embed(ctx, embed):
     """
     Function that handles the sending of embeds
@@ -91,9 +111,9 @@ class ChannelCommands(commands.Cog):
     @commands.command(name='leave', description="Makes the bot leave the current voice channel",
                       help="Makes the bot leave the current voice channel")
     async def leave(self, ctx):
+        global has_played_once
         voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
-        if voice_client and voice_client.is_connected():
-            await voice_client.disconnect()
+        await disconnect(voice_client)
 
     @commands.command(name='move', description="Moves the bot to your current voice channel",
                       help="Moves the bot to your current voice channel")
@@ -128,7 +148,7 @@ class ChannelCommands(commands.Cog):
                     await ch.connect()
                 else:
                     await ctx.guild.voice_client.move_to(ch)
-
+                await auto_leave(ctx.guild.voice_client)
                 return
 
         await ctx.send("Could not find the specified voice channel :frowning:")
@@ -144,14 +164,14 @@ class PlayCommands(commands.Cog):
                                   "here> to trigger voice playback",
                       help="Makes the bot say your message in your voice channel")
     async def to_tts(self, ctx):
-        global counter, already_playing
+        global counter, already_playing, last_play, has_played_once
         if ctx.author.voice is None and not ctx.guild.voice_client:
             await ctx.send("Your are not currently connected to a voice channel!")
             return
 
         if not ctx.guild.voice_client:
-            channel = ctx.author.voice.channel
-            vc = await channel.connect()
+            ch = ctx.author.voice.channel
+            vc = await ch.connect()
         else:
             vc = ctx.guild.voice_client
 
@@ -168,6 +188,15 @@ class PlayCommands(commands.Cog):
         counter += 1
         if not already_playing:
             play(vc)
+
+        obj = object()
+        last_play = id(obj)
+        has_played_once = True
+
+        await asyncio.sleep(AUTO_TIMEOUT_SECONDS)
+
+        if last_play == id(obj):
+            await disconnect(vc)
 
     @commands.command(name='skip', description="Skips the current Voice message",
                       help="Skips the current Voice message")
