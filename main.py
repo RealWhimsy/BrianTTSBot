@@ -2,7 +2,7 @@ import os
 import discord
 import requests
 import boto3
-from discord import Forbidden
+from discord import Forbidden, client
 from discord.ext import commands, tasks
 from discord.voice_client import VoiceClient
 from discord.utils import get
@@ -200,7 +200,7 @@ class Help(commands.Cog):
 
             # starting to build embed
             emb = discord.Embed(title='Commands and modules', color=discord.Color.blue(),
-                                description=f'Use `{prefix}bttshelp <module>` to gain more information about that module '
+                                description=f'Use `{prefix}help <module>` to gain more information about that module '
                                             f':smiley:\n')
 
             # iterating trough cogs, gathering descriptions
