@@ -67,8 +67,10 @@ async def on_ready():
 # TODO make a tts queue
 async def to_tts(ctx):
     global counter, already_playing
-    if ctx.author.voice.channel is None and not ctx.guild.voice_client:
-        await ctx.send("Your are not currently connected to a voice channel")
+    if ctx.author.voice is None and not ctx.guild.voice_client:
+        await ctx.send("Your are not currently connected to a voice channel!")
+        return
+
     if not ctx.guild.voice_client:
         channel = ctx.author.voice.channel
         vc = await channel.connect()
@@ -109,5 +111,16 @@ async def stop_tts(ctx):
     voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
     if voice_client and voice_client.is_connected():
         await voice_client.disconnect()
+
+
+@bot.command(name='move', description="Makes the bot leave the current voice channel",
+             help="Makes the bot leave the current voice channel")
+async def move(ctx):
+    if ctx.author.voice is None:
+        await ctx.send("Your are not currently connected to a voice channel!")
+        return
+
+    channel = ctx.author.voice.channel
+    await ctx.guild.voice_client.move_to(channel)
 
 bot.run(TOKEN)
