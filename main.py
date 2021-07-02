@@ -2,7 +2,7 @@ import os
 import discord
 import requests
 import boto3
-from discord import Forbidden, client
+from discord import Forbidden, client, channel
 from discord.ext import commands, tasks
 from discord.voice_client import VoiceClient
 from discord.utils import get
@@ -102,8 +102,36 @@ class ChannelCommands(commands.Cog):
             await ctx.send("Your are not currently connected to a voice channel!")
             return
 
-        channel = ctx.author.voice.channel
-        await ctx.guild.voice_client.move_to(channel)
+        ch = ctx.author.voice.channel
+        await ctx.guild.voice_client.move_to(ch)
+
+    @commands.command(name='join',
+                      description="Makes the bot join a specified voice channel. Type '$join <channel_name>' to make"
+                                  "the bot join.",
+                      help='Makes the bot join a specified voice channel')
+    async def join(self, ctx, ch_name=None):
+        if ch_name is None:
+            await ctx.send("Please specify a voice channel that I should join!")
+            return
+
+        voice_channels = []  # holds all voice channels
+        channels = ctx.guild.channels  # all channels (including text from) on the server
+        for ch in channels:
+            if isinstance(ch, channel.VoiceChannel):
+                voice_channels.append(ch)  # if a voice channel is found, add it to the list
+
+        # search all voice channels for one that matches the passed name
+        for ch in voice_channels:
+            if str(ch).lower() == str(ch_name).lower():
+                # channel was found, check if already in voice
+                if not ctx.guild.voice_client:
+                    await ch.connect()
+                else:
+                    await ctx.guild.voice_client.move_to(ch)
+
+                return
+
+        await ctx.send("Could not find the specified voice channel :frowning:")
 
 
 class PlayCommands(commands.Cog):
