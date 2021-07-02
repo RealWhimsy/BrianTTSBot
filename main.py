@@ -1,4 +1,3 @@
-
 import os
 import discord
 import requests
@@ -57,70 +56,91 @@ def clear_queue():
     played_counter = 0
     already_playing = False
 
+
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
 
-@bot.command(name='btts', description="Makes the bot say your message in your voice channel",
-             help="Makes the bot say your message in your voice channel")
-# TODO make a tts queue
-async def to_tts(ctx):
-    global counter, already_playing
-    if ctx.author.voice is None and not ctx.guild.voice_client:
-        await ctx.send("Your are not currently connected to a voice channel!")
-        return
+@bot.command(name='bible', help="Shows a link to a helpful TTS documentation", category="Help")
+async def bible(ctx):
+    await ctx.send("Brian TTS for Pepegas:\n "
+                   "https://docs.google.com/document/d/1qLKdc3QArtn6PVuGf42EfoMuzvLE_ykWwU1RViEcrbU/edit")
 
-    if not ctx.guild.voice_client:
+
+class ChannelCommands(commands.Cog):
+    """
+    Contains all commands regarding channel movement
+    """
+
+    @commands.command(name='leave', description="Makes the bot leave the current voice channel",
+                      help="Makes the bot leave the current voice channel")
+    async def leave(self, ctx):
+        voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
+        if voice_client and voice_client.is_connected():
+            await voice_client.disconnect()
+
+    @commands.command(name='move', description="Moves the bot to your current voice channel",
+                      help="Moves the bot to your current voice channel")
+    async def move(self, ctx):
+        if ctx.author.voice is None:
+            await ctx.send("Your are not currently connected to a voice channel!")
+            return
+
         channel = ctx.author.voice.channel
-        vc = await channel.connect()
-    else:
-        vc = ctx.guild.voice_client
-
-    text = ctx.message.content[6:]  # remove "/btts " prefix from the actual text
-
-    response = polly_client.synthesize_speech(VoiceId='Brian',
-                                              OutputFormat='mp3',
-                                              Text=text,
-                                              Engine='standard')
-
-    file = open('speech' + str(counter) + '.mp3', 'wb')
-    file.write(response['AudioStream'].read())
-    file.close()
-    counter += 1
-    if not already_playing:
-        play(vc)
+        await ctx.guild.voice_client.move_to(channel)
 
 
-@bot.command(name='skip', description="Skips the current Voice message", help="Skips the current Voice message")
-async def skip_tts(ctx):
-    if ctx.guild.voice_client:
-        ctx.guild.voice_client.stop()
+class PlayCommands(commands.Cog):
+    """
+    Contains all commands regarding playback
+    """
+
+    @commands.command(name='btts',
+                      description="Makes the bot say your message in your voice channel. Type '/btts <your message"
+                                  "here> to trigger voice playback",
+                      help="Makes the bot say your message in your voice channel")
+    async def to_tts(self, ctx):
+        global counter, already_playing
+        if ctx.author.voice is None and not ctx.guild.voice_client:
+            await ctx.send("Your are not currently connected to a voice channel!")
+            return
+
+        if not ctx.guild.voice_client:
+            channel = ctx.author.voice.channel
+            vc = await channel.connect()
+        else:
+            vc = ctx.guild.voice_client
+
+        text = ctx.message.content[6:]  # remove "/btts " prefix from the actual text
+
+        response = polly_client.synthesize_speech(VoiceId='Brian',
+                                                  OutputFormat='mp3',
+                                                  Text=text,
+                                                  Engine='standard')
+
+        file = open('speech' + str(counter) + '.mp3', 'wb')
+        file.write(response['AudioStream'].read())
+        file.close()
+        counter += 1
+        if not already_playing:
+            play(vc)
+
+    @commands.command(name='skip', description="Skips the current Voice message",
+                      help="Skips the current Voice message")
+    async def skip_tts(self, ctx):
+        if ctx.guild.voice_client:
+            ctx.guild.voice_client.stop()
+
+    @commands.command(name='stop', description="Fully stops playback and deletes the queue",
+                      help="Fully stops playback and deletes the queue")
+    async def stop_tts(self, ctx):
+        global counter, played_counter
+        while played_counter < counter:
+            ctx.guild.voice_client.stop()
 
 
-@bot.command(name='stop', description="Fully stops playback and deletes the queue",
-             help="Fully stops playback and deletes the queue")
-async def stop_tts(ctx):
-    while ctx.guild.voice_client:
-        ctx.guild.voice_client.stop()
-
-
-@bot.command(name='leave', description="Makes the bot leave the current voice channel",
-             help="Makes the bot leave the current voice channel")
-async def stop_tts(ctx):
-    voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
-    if voice_client and voice_client.is_connected():
-        await voice_client.disconnect()
-
-
-@bot.command(name='move', description="Moves the bot to your current voice channel",
-             help="Moves the bot to your current voice channel")
-async def move(ctx):
-    if ctx.author.voice is None:
-        await ctx.send("Your are not currently connected to a voice channel!")
-        return
-
-    channel = ctx.author.voice.channel
-    await ctx.guild.voice_client.move_to(channel)
+bot.add_cog(PlayCommands())
+bot.add_cog(ChannelCommands())
 
 bot.run(TOKEN)
