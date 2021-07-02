@@ -113,8 +113,8 @@ async def stop_tts(ctx):
         await voice_client.disconnect()
 
 
-@bot.command(name='move', description="Makes the bot leave the current voice channel",
-             help="Makes the bot leave the current voice channel")
+@bot.command(name='move', description="Moves the bot to your current voice channel",
+             help="Moves the bot to your current voice channel")
 async def move(ctx):
     if ctx.author.voice is None:
         await ctx.send("Your are not currently connected to a voice channel!")
