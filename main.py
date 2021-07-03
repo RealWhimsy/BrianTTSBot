@@ -11,8 +11,6 @@ from discord.utils import get
 from dotenv import load_dotenv
 
 AUTO_TIMEOUT_SECONDS = 300  # bot will automatically leave after not sending voice activity for this many seconds
-counter = 0                 # counts the length of the queue
-played_counter = 0          # number of already played tracks from the queue
 already_playing = {}        # dictionary that maps guild id to playing state: true if the bot is already playing
 last_play = None            # unique id of the last played track, used to check for idle times
 has_played_once = False     # true if the bot has played tts at least once after joining a voice channel
@@ -34,9 +32,9 @@ def play(vc, is_incrementing=False):
     Play a voice clip.
     Calls itself recursively until all added clips have been played.
     :param vc: the Discord VoiceClient in use
-    :param is_incrementing: whether the played_counter should be incremented or not
+    :param is_incrementing: true when the call was made from the after-function
     """
-    global played_counter, counter, already_playing, guild_id_to_filenames
+    global already_playing, guild_id_to_filenames
 
     guild_id = vc.guild.id
     if not already_playing[guild_id]:
@@ -57,18 +55,6 @@ def play(vc, is_incrementing=False):
     filename = guild_id_to_filenames[guild_id][0]
 
     vc.play(discord.FFmpegPCMAudio(source=filename), after=lambda e: play(vc, True))
-
-
-def clear_queue():
-    global counter, played_counter, already_playing
-    folder = './'
-    filelist = [f for f in os.listdir(folder) if f.endswith(".mp3")]
-    for file in filelist:
-        os.remove(os.path.join(folder, file))
-
-    counter = 0
-    played_counter = 0
-    already_playing = False
 
 
 async def auto_leave(vc):
@@ -173,7 +159,7 @@ class PlayCommands(commands.Cog):
                                   "here> to trigger voice playback",
                       help="Makes the bot say your message in your voice channel")
     async def to_tts(self, ctx):
-        global counter, already_playing, last_play, has_played_once, guild_id_to_filenames
+        global already_playing, last_play, has_played_once, guild_id_to_filenames
         if ctx.author.voice is None and not ctx.guild.voice_client:
             await ctx.send("Your are not currently connected to a voice channel!")
             return
@@ -203,7 +189,6 @@ class PlayCommands(commands.Cog):
             already_playing[ctx.guild.id] = False
 
         guild_id_to_filenames[ctx.guild.id].append(filename)
-        counter += 1
         if not already_playing[ctx.guild.id]:
             play(vc)
 
