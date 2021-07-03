@@ -3,6 +3,7 @@ import discord
 import requests
 import boto3
 import asyncio
+import uuid
 from discord import Forbidden, client, channel
 from discord.ext import commands, tasks
 from discord.voice_client import VoiceClient
@@ -12,9 +13,10 @@ from dotenv import load_dotenv
 AUTO_TIMEOUT_SECONDS = 300  # bot will automatically leave after not sending voice activity for this many seconds
 counter = 0                 # counts the length of the queue
 played_counter = 0          # number of already played tracks from the queue
-already_playing = False     # true if the bot is already playing
+already_playing = {}        # dictionary that maps guild id to playing state: true if the bot is already playing
 last_play = None            # unique id of the last played track, used to check for idle times
 has_played_once = False     # true if the bot has played tts at least once after joining a voice channel
+guild_id_to_filenames = {}  # maps guild id to audio filenames
 
 load_dotenv()
 polly_client = boto3.Session(
@@ -34,20 +36,27 @@ def play(vc, is_incrementing=False):
     :param vc: the Discord VoiceClient in use
     :param is_incrementing: whether the played_counter should be incremented or not
     """
-    global played_counter, counter, already_playing
+    global played_counter, counter, already_playing, guild_id_to_filenames
 
-    if not already_playing:
-        already_playing = True
+    guild_id = vc.guild.id
+    if not already_playing[guild_id]:
+        already_playing[guild_id] = True
 
-    if is_incrementing:
-        played_counter += 1
-
-    # delete all files and reset the queue when all files have been played
-    if played_counter == counter:
-        clear_queue()
+    if len(guild_id_to_filenames[guild_id]) <= 0:
+        already_playing[guild_id] = False
         return
 
-    vc.play(discord.FFmpegPCMAudio(source='speech' + str(played_counter) + '.mp3'), after=lambda e: play(vc, True))
+    if is_incrementing:
+        del_filename = guild_id_to_filenames[guild_id].pop(0)
+        os.remove(os.path.join('./', del_filename))
+
+    if len(guild_id_to_filenames[guild_id]) <= 0:
+        already_playing[guild_id] = False
+        return
+
+    filename = guild_id_to_filenames[guild_id][0]
+
+    vc.play(discord.FFmpegPCMAudio(source=filename), after=lambda e: play(vc, True))
 
 
 def clear_queue():
@@ -164,7 +173,7 @@ class PlayCommands(commands.Cog):
                                   "here> to trigger voice playback",
                       help="Makes the bot say your message in your voice channel")
     async def to_tts(self, ctx):
-        global counter, already_playing, last_play, has_played_once
+        global counter, already_playing, last_play, has_played_once, guild_id_to_filenames
         if ctx.author.voice is None and not ctx.guild.voice_client:
             await ctx.send("Your are not currently connected to a voice channel!")
             return
@@ -182,11 +191,20 @@ class PlayCommands(commands.Cog):
                                                   Text=text,
                                                   Engine='standard')
 
-        file = open('speech' + str(counter) + '.mp3', 'wb')
+        speech_id = uuid.uuid4()
+        filename = 'speech_' + speech_id.hex + '.mp3'
+        file = open(filename, 'wb')
         file.write(response['AudioStream'].read())
         file.close()
+        if ctx.guild.id not in guild_id_to_filenames:
+            guild_id_to_filenames[ctx.guild.id] = []
+
+        if ctx.guild.id not in already_playing:
+            already_playing[ctx.guild.id] = False
+
+        guild_id_to_filenames[ctx.guild.id].append(filename)
         counter += 1
-        if not already_playing:
+        if not already_playing[ctx.guild.id]:
             play(vc)
 
         obj = object()
@@ -207,8 +225,9 @@ class PlayCommands(commands.Cog):
     @commands.command(name='stop', description="Fully stops playback and deletes the queue",
                       help="Fully stops playback and deletes the queue")
     async def stop_tts(self, ctx):
-        global counter, played_counter
-        while played_counter < counter:
+        global guild_id_to_filenames
+        guild_id = ctx.guild.id
+        while len(guild_id_to_filenames[guild_id]) > 0:
             ctx.guild.voice_client.stop()
 
 
