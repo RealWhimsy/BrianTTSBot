@@ -106,7 +106,13 @@ class ChannelCommands(commands.Cog):
     @commands.command(name='leave', description="Makes the bot leave the current voice channel",
                       help="Makes the bot leave the current voice channel")
     async def leave(self, ctx):
-        global has_played_once
+        global has_played_once, guild_id_to_filenames
+        # stop playback first
+        guild_id = ctx.guild.id
+        while len(guild_id_to_filenames[guild_id]) > 0:
+            ctx.guild.voice_client.stop()
+            
+        # then disconnect
         voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
         await disconnect(voice_client)
 
