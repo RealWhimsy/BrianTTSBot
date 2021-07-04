@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 
 AUTO_TIMEOUT_SECONDS = 300  # bot will automatically leave after not sending voice activity for this many seconds
 already_playing = {}        # dictionary that maps guild id to playing state: true if the bot is already playing
-last_play = None            # unique id of the last played track, used to check for idle times
-has_played_once = False     # true if the bot has played tts at least once after joining a voice channel
+last_play = {}              # unique id of the last played track, used to check for idle times
+has_played_once = {}        # true if the bot has played tts at least once after joining a voice channel
 guild_id_to_filenames = {}  # maps guild id to audio filenames
 
 load_dotenv()
@@ -62,7 +62,7 @@ async def auto_leave(vc):
 
     await asyncio.sleep(AUTO_TIMEOUT_SECONDS)
 
-    if not has_played_once:
+    if vc.guild.id not in has_played_once or not has_played_once[vc.guild.id]:
         await disconnect(vc)
 
 
@@ -70,7 +70,7 @@ async def disconnect(vc):
     global has_played_once
     if vc and vc.is_connected():
         await vc.disconnect()
-        has_played_once = False
+        has_played_once[vc.guild.id] = False
 
 
 async def send_embed(ctx, embed):
@@ -111,9 +111,10 @@ class ChannelCommands(commands.Cog):
         guild_id = ctx.guild.id
         while len(guild_id_to_filenames[guild_id]) > 0:
             ctx.guild.voice_client.stop()
-            
+
         # then disconnect
         voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
+        has_played_once[ctx.guild.id] = False
         await disconnect(voice_client)
 
     @commands.command(name='move', description="Moves the bot to your current voice channel",
@@ -199,12 +200,12 @@ class PlayCommands(commands.Cog):
             play(vc)
 
         obj = object()
-        last_play = id(obj)
-        has_played_once = True
+        last_play[ctx.guild.id] = id(obj)
+        has_played_once[ctx.guild.id] = True
 
         await asyncio.sleep(AUTO_TIMEOUT_SECONDS)
 
-        if last_play == id(obj):
+        if last_play[ctx.guild.id] == id(obj):
             await disconnect(vc)
 
     @commands.command(name='skip', description="Skips the current Voice message",
@@ -247,11 +248,9 @@ class Help(commands.Cog):
     async def help(self, ctx, *input):
         """Shows all modules of that bot"""
 
-        # !SET THOSE VARIABLES TO MAKE THE COG FUNCTIONAL!
         prefix = '$'
         version = 1.0
 
-        # setting owner name - if you don't wanna be mentioned remove line 49-60 and adjust help text (line 88)
         owner = "Whimsy#5457"
         owner_name = "Whimsy"
 
@@ -340,7 +339,7 @@ class Help(commands.Cog):
         await send_embed(ctx, emb)
 
 
-bot.remove_command('help')
+bot.remove_command('help')  # remove default help command to make room for the custom one
 bot.add_cog(PlayCommands())
 bot.add_cog(ChannelCommands())
 bot.add_cog(Info())
