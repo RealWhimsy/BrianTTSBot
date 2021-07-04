@@ -24,7 +24,7 @@ polly_client = boto3.Session(
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='$')
+bot = commands.Bot(command_prefix='.')
 
 
 def play(vc, is_incrementing=False):
@@ -142,9 +142,13 @@ class ChannelCommands(commands.Cog):
             if isinstance(ch, channel.VoiceChannel):
                 voice_channels.append(ch)  # if a voice channel is found, add it to the list
 
+        # ignore capitalization and remove all non-ascii symbols (such as emojis)
+        ch_name = str(ch_name).lower().encode('ascii', 'ignore').decode('ascii')
+
         # search all voice channels for one that matches the passed name
         for ch in voice_channels:
-            if str(ch).lower() == str(ch_name).lower():
+            normalized_ch = str(ch).lower().encode('ascii', 'ignore').decode('ascii')
+            if normalized_ch == ch_name:
                 # channel was found, check if already in voice
                 if not ctx.guild.voice_client:
                     await ch.connect()
