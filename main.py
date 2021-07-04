@@ -24,7 +24,7 @@ polly_client = boto3.Session(
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='.')
+bot = commands.Bot(command_prefix='$')
 
 
 def play(vc, is_incrementing=False):
