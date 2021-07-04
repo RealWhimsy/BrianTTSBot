@@ -143,11 +143,11 @@ class ChannelCommands(commands.Cog):
                 voice_channels.append(ch)  # if a voice channel is found, add it to the list
 
         # ignore capitalization and remove all non-ascii symbols (such as emojis)
-        ch_name = str(ch_name).lower().encode('ascii', 'ignore').decode('ascii')
+        ch_name = str(ch_name).lower().encode('ascii', 'ignore').decode('ascii').strip()
 
         # search all voice channels for one that matches the passed name
         for ch in voice_channels:
-            normalized_ch = str(ch).lower().encode('ascii', 'ignore').decode('ascii')
+            normalized_ch = str(ch).lower().encode('ascii', 'ignore').decode('ascii').strip()
             if normalized_ch == ch_name:
                 # channel was found, check if already in voice
                 if not ctx.guild.voice_client:
