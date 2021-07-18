@@ -237,6 +237,11 @@ class Info(commands.Cog):
         await ctx.send("Brian TTS for Pepegas:\n "
                        "https://docs.google.com/document/d/1qLKdc3QArtn6PVuGf42EfoMuzvLE_ykWwU1RViEcrbU/edit")
 
+    @commands.command(name='support', help="Support the bot by voting/reviewing it on top.gg")
+    async def support(self, ctx):
+        await ctx.send("Support the bot by voting/reviewing it on top.gg. Every vote is appreciated! \n"
+                       "https://top.gg/bot/860190148179394591")
+
 
 # advanced help message by Chris#0001 https://gist.github.com/nonchris/1c7060a14a9d94e7929aa2ef14c41bc2
 class Help(commands.Cog):
@@ -295,6 +300,8 @@ class Help(commands.Cog):
 
             # setting information about author
             emb.add_field(name="About", value=f"BrianBot is developed by Whimsy#5457, based on discord.py.\n\
+                                    If you enjoy the bot, please leave a rating on top.gg: \
+                                    https://top.gg/bot/860190148179394591 \n\
                                     Please visit https://github.com/RealWhimsy/BrianTTSBot to submit ideas or bugs.")
             emb.set_footer(text=f"Bot is running {version}")
 
