@@ -37,7 +37,7 @@ def play(vc, is_incrementing=False):
     global already_playing, guild_id_to_filenames
 
     guild_id = vc.guild.id
-    if not already_playing[guild_id]:
+    if not already_playing[guild_id] and vc.is_connected():
         already_playing[guild_id] = True
 
     if len(guild_id_to_filenames[guild_id]) <= 0:
@@ -54,7 +54,8 @@ def play(vc, is_incrementing=False):
 
     filename = guild_id_to_filenames[guild_id][0]
 
-    vc.play(discord.FFmpegPCMAudio(source=filename), after=lambda e: play(vc, True))
+    if vc.is_connected():
+        vc.play(discord.FFmpegPCMAudio(source=filename), after=lambda e: play(vc, True))
 
 
 async def auto_leave(vc):
@@ -96,6 +97,15 @@ async def send_embed(ctx, embed):
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
+
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if after.channel is None and before.channel is not None:
+        guild_id = before.channel.guild.id
+
+        has_played_once[guild_id] = False
+        already_playing[guild_id] = False
 
 
 class ChannelCommands(commands.Cog):
@@ -204,7 +214,7 @@ class PlayCommands(commands.Cog):
             play(vc)
 
         obj = object()
-        last_play[ctx.guild.id] = id(obj)
+        last_play[ctx.guild.id] = id(obj)  # TODO might have to move this to play function
         has_played_once[ctx.guild.id] = True
 
         await asyncio.sleep(AUTO_TIMEOUT_SECONDS)
