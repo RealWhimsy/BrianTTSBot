@@ -193,6 +193,10 @@ class PlayCommands(commands.Cog):
 
         text = ctx.message.content[6:]  # remove "/btts " prefix from the actual text
 
+        # only allow up to 1000 characters per message
+        if len(text) > 1000:
+            text = text[:1000]
+
         response = polly_client.synthesize_speech(VoiceId='Brian',
                                                   OutputFormat='mp3',
                                                   Text=text,
