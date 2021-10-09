@@ -9,12 +9,14 @@ from discord.ext import commands, tasks
 from discord.voice_client import VoiceClient
 from discord.utils import get
 from dotenv import load_dotenv
+import voices
 
 AUTO_TIMEOUT_SECONDS = 300  # bot will automatically leave after not sending voice activity for this many seconds
-already_playing = {}        # dictionary that maps guild id to playing state: true if the bot is already playing
-last_play = {}              # unique id of the last played track, used to check for idle times
-has_played_once = {}        # true if the bot has played tts at least once after joining a voice channel
+already_playing = {}  # dictionary that maps guild id to playing state: true if the bot is already playing
+last_play = {}  # unique id of the last played track, used to check for idle times
+has_played_once = {}  # true if the bot has played tts at least once after joining a voice channel
 guild_id_to_filenames = {}  # maps guild id to audio filenames
+guild_id_to_voice_id = {}
 
 load_dotenv()
 polly_client = boto3.Session(
@@ -197,7 +199,10 @@ class PlayCommands(commands.Cog):
         if len(text) > 1000:
             text = text[:1000]
 
-        response = polly_client.synthesize_speech(VoiceId='Brian',
+        if ctx.guild.id not in guild_id_to_voice_id:
+            guild_id_to_voice_id[ctx.guild.id] = voices.BRIAN["name"]
+
+        response = polly_client.synthesize_speech(VoiceId=guild_id_to_voice_id[ctx.guild.id],
                                                   OutputFormat='mp3',
                                                   Text=text,
                                                   Engine='standard')
@@ -257,6 +262,140 @@ class Info(commands.Cog):
                        "https://top.gg/bot/860190148179394591")
 
 
+class VoiceCommands(commands.Cog):
+    """
+    Contains commands for setting the voice of the bot
+    """
+
+    @commands.command(name='voices1', help="Shows the first table of available voices.")
+    async def voices_1(self, ctx):
+        lines = self.build_voice_table(voices.voices_1)
+
+        await ctx.send(lines)
+
+    @commands.command(name='voices2', help="Shows the second table of available voices.")
+    async def voices_2(self, ctx):
+        lines = self.build_voice_table(voices.voices_2)
+
+        await ctx.send(lines)
+
+    @commands.command(name='voices3', help="Shows the third table of available voices")
+    async def voices_3(self, ctx):
+        lines = self.build_voice_table(voices.voices_3)
+
+        await ctx.send(lines)
+
+    @commands.command(name='voices', help="Shows all available voices")
+    async def voices(self, ctx):
+        lines_1 = self.build_voice_table(voices.voices_1)
+        lines_2 = self.build_voice_table(voices.voices_2)
+        lines_3 = self.build_voice_table(voices.voices_3)
+        await ctx.send(lines_1)
+        await ctx.send(lines_2)
+        await ctx.send(lines_3)
+
+    @commands.command(name='setvoice', help="Sets the voice of the bot. Type '$setvoice <name_of_voice>'.")
+    async def set_voice(self, ctx):
+        name = ctx.message.content[10:]  # remove "$setvoice " prefix
+        name = name.replace('>', '')  # remove '>' in case the user entered the name like "<name>"
+        name = name.replace('<', '')  # remove '<' in case the user entered the name like "<name>"
+        name = name.capitalize()  # Capitalize the name
+
+        is_available_voice = False
+        for voice in voices.all_voices:
+            if voice["name"].lower() == name.lower().strip():
+                is_available_voice = True
+                break
+
+        if not is_available_voice:
+            await ctx.send("Sorry, " + name + " is not an available voice!\nUse ```$voices``` to see a list of all "
+                                              "available voices, then use ```$setvoice <name>``` to set the voice.")
+
+        else:
+            guild_id_to_voice_id[ctx.guild.id] = name
+            await ctx.send("TTS voice successfully set to " + name + "!")
+
+    @commands.command(name='currentvoice', help="Shows information about the currently set voice.")
+    async def current_voice(self, ctx):
+
+        if ctx.guild.id not in guild_id_to_voice_id:
+            guild_id_to_voice_id[ctx.guild.id] = "Brian"
+
+        voice_name = guild_id_to_voice_id[ctx.guild.id]
+        voice_dict = None
+
+        for voice in voices.all_voices:
+            if voice["name"] == voice_name:
+                voice_dict = voice
+                break
+
+        if voice_dict is not None:
+            await ctx.send("Current voice info:\n" + "```" +
+                           "Language: " + voice_dict["language"] + "\n" +
+                           "Name    : " + voice_dict["name"] + "\n" +
+                           "Gender  : " + voice_dict["gender"]
+                           + "```"
+                           )
+
+    def build_voice_table(self, voice_array):
+        num_language_separators = 31
+        num_name_separators = 18
+        num_gender_separators = 19
+
+        lines = "```\n+-------------------------------+------------------+-------------------+\n"
+        lines += "+           Language            +       Name       +       Gender      +\n"
+        lines += "+-------------------------------+------------------+-------------------+\n"
+
+        for voice in voice_array:
+            language_length = len(voice["language"])
+            name_length = len(voice["name"])
+            gender_length = len(voice["gender"])
+
+            lines += "| " + voice["language"]
+            for x in range(1, num_language_separators - language_length):
+                lines += " "
+
+            lines += "| " + voice["name"]
+            for x in range(1, num_name_separators - name_length):
+                lines += " "
+
+            lines += "| " + voice["gender"]
+            for x in range(1, num_gender_separators - gender_length):
+                lines += " "
+
+            lines += "|\n"
+
+        lines += "+-------------------------------+------------------+-------------------+```"
+
+        return lines
+
+
+class AdminCommands(commands.Cog):
+
+    @commands.command(name='broadcast')
+    @commands.is_owner()
+    async def broadcast(self, ctx):
+        msg = ctx.message.content[11:]
+        for server in bot.guilds:
+            for ch in server.text_channels:
+                try:
+                    await ch.send(msg)
+                except Exception:
+                    continue
+                else:
+                    break
+
+    @commands.command(name='broadcastpreview')
+    @commands.is_owner()
+    async def broadcast_preview(self, ctx):
+        msg = ctx.message.content[18:]
+        await ctx.send(msg)
+
+    @commands.command(name='servercount')
+    @commands.is_owner()
+    async def server_count(self, ctx):
+        await ctx.send("I'm in " + str(len(bot.guilds)) + " servers!")
+
 # advanced help message by Chris#0001 https://gist.github.com/nonchris/1c7060a14a9d94e7929aa2ef14c41bc2
 class Help(commands.Cog):
     """
@@ -295,6 +434,9 @@ class Help(commands.Cog):
             # iterating trough cogs, gathering descriptions
             cogs_desc = ''
             for cog in self.bot.cogs:
+                if cog == "AdminCommands":
+                    continue  # do not display AdminCommands in help menu
+
                 cogs_desc += f'`{cog}` {self.bot.cogs[cog].__doc__}\n'
 
             # adding 'list' of cogs to embed
@@ -367,7 +509,9 @@ class Help(commands.Cog):
 bot.remove_command('help')  # remove default help command to make room for the custom one
 bot.add_cog(PlayCommands())
 bot.add_cog(ChannelCommands())
+bot.add_cog(VoiceCommands())
 bot.add_cog(Info())
+bot.add_cog(AdminCommands())
 bot.add_cog(Help(bot))
 
 bot.run(TOKEN)
