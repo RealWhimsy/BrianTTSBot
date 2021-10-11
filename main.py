@@ -40,6 +40,11 @@ def play(vc, is_incrementing=False):
 
     guild_id = vc.guild.id
     if not already_playing[guild_id] and vc.is_connected():
+        if len(guild_id_to_filenames[guild_id]) > 1:
+            for x in range(0, len(guild_id_to_filenames[guild_id]) - 1):
+                del_filename = guild_id_to_filenames[guild_id].pop(0)
+                os.remove(os.path.join('./', del_filename))
+
         already_playing[guild_id] = True
 
     if len(guild_id_to_filenames[guild_id]) <= 0:
@@ -57,7 +62,13 @@ def play(vc, is_incrementing=False):
     filename = guild_id_to_filenames[guild_id][0]
 
     if vc.is_connected():
-        vc.play(discord.FFmpegPCMAudio(source=filename), after=lambda e: play(vc, True))
+        if os.path.isfile("./" + filename):
+            vc.play(discord.FFmpegPCMAudio(source=filename), after=lambda e: play(vc, True))
+        else:
+            try:
+                guild_id_to_filenames[guild_id].remove(filename)
+            except Exception:
+                pass  # don't judge me, this is scuffed af
 
 
 async def auto_leave(vc):
@@ -108,6 +119,9 @@ async def on_voice_state_update(member, before, after):
 
         has_played_once[guild_id] = False
         already_playing[guild_id] = False
+
+        if member.guild.voice_client is not None:
+            await member.guild.voice_client.disconnect()
 
 
 class ChannelCommands(commands.Cog):
