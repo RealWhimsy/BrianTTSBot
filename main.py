@@ -8,6 +8,7 @@ from discord import Forbidden, client, channel
 from discord.ext import commands, tasks
 from discord.voice_client import VoiceClient
 from discord.utils import get
+from discord.ext.commands import CommandNotFound
 from dotenv import load_dotenv
 import voices
 
@@ -122,6 +123,17 @@ async def on_voice_state_update(member, before, after):
 
         if member.guild.voice_client is not None:
             await member.guild.voice_client.disconnect()
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    """
+    Ignore errors that occur by calling commands that do not exist (e.g. because of typos or other bots with the
+    same prefix).
+    """
+    if isinstance(error, CommandNotFound):
+        return
+    raise error
 
 
 class ChannelCommands(commands.Cog):
