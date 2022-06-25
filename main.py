@@ -318,8 +318,7 @@ class VoiceCommands(commands.Cog):
 
         await ctx.response.send_message(lines)
 
-    @client.slash_command(name='voices3', description="Shows the third table of available voices",
-                          guild_ids=[214106612552433665])
+    @client.slash_command(name='voices3', description="Shows the third table of available voices")
     async def voices_3(self, ctx):
         lines = self.build_voice_table(voices.voices_3)
 
