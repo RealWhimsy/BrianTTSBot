@@ -99,6 +99,7 @@ async def disconnect(vc):
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
+    await client.change_presence(activity=nextcord.Game(name="Type '/btts <message>' for TTS!"))
 
 
 @client.event
