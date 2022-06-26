@@ -408,6 +408,7 @@ class AdminCommands(commands.Cog):
     @client.slash_command(name='broadcast', description="Sends a message to all servers the bot is in",
                           guild_ids=[214106612552433665])
     async def broadcast(self, ctx, message):
+        await ctx.response.send_message("Message sent!")
         for server in client.guilds:
             for ch in server.text_channels:
                 try:
@@ -417,7 +418,6 @@ class AdminCommands(commands.Cog):
                     continue
                 else:
                     break
-        await ctx.response.send_message("Message sent!")
 
     @client.slash_command(name='broadcastpreview', description="Preview how the broadcast message would look like",
                           guild_ids=[214106612552433665])
