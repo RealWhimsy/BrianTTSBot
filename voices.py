@@ -40,8 +40,8 @@ NICOLE = {
     "language": "English (Australian)"
 }
 
-RUSSEL = {
-    "name": "Russel",
+RUSSELL = {
+    "name": "Russell",
     "gender": "Male",
     "language": "English (Australian)"
 }
@@ -366,7 +366,7 @@ ZEINA,
     LOTTE,
     RUBEN,
     NICOLE,
-    RUSSEL,
+    RUSSELL,
     AMY,
     Emma,
     BRIAN,
@@ -435,7 +435,7 @@ all_voices = [
     LOTTE,
     RUBEN,
     NICOLE,
-    RUSSEL,
+    RUSSELL,
     AMY,
     Emma,
     BRIAN,
