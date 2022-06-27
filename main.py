@@ -208,8 +208,8 @@ class ChannelCommands(commands.Cog):
             if normalized_ch == ch_name:
                 # channel was found, check if already in voice
                 if not ctx.guild.voice_client:
-                    ctx.guild.voice_client.stop()
                     await ch.connect()
+                    ctx.guild.voice_client.stop()
                     await ctx.response.send_message("Hello there!")
                 else:
                     await ctx.guild.voice_client.move_to(ch)
@@ -229,6 +229,8 @@ class PlayCommands(commands.Cog):
                           description="Makes the bot say your message in your voice channel.")
     async def to_tts(self, ctx, message:str):
         global already_playing, last_play, has_played_once, guild_id_to_filenames
+        if not hasattr(ctx.user, 'voice'):
+            return
         if ctx.user.voice is None and not ctx.guild.voice_client:
             await ctx.send("Your are not currently connected to a voice channel!")
             return
